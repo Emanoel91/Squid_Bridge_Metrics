@@ -789,7 +789,7 @@ def load_new_users_data(timeframe, start_date, end_date):
       GROUP BY 1
     )
     SELECT 
-      date_trunc('{timeframe}', first_date) as Date, 
+      date_trunc('{timeframe}', first_date) as "Date", 
       count(distinct user) as "New Users",
       sum(count(distinct user)) OVER (ORDER BY date_trunc('{timeframe}', first_date)) as "Total New Users"
     FROM overview
@@ -814,16 +814,16 @@ df_users = load_new_users_data(timeframe, start_date, end_date)
 fig = go.Figure()
 
 fig.add_trace(go.Bar(
-    x=df_users['Date'],
-    y=df_users['New Users'],
+    x=df_users["Date"],
+    y=df_users["New Users"],
     name='New Users',
     marker_color='#e2fb43',
     yaxis='y1'
 ))
 
 fig.add_trace(go.Scatter(
-    x=df_users['Date'],
-    y=df_users['Total New Users'],
+    x=df_users["Date"],
+    y=df_users["Total New Users"],
     name='Total New Users',
     mode='lines+markers',
     line=dict(color='#ca99e5'),
