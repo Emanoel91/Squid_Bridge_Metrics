@@ -751,47 +751,4 @@ df_path = load_path_data(start_date, end_date)
 st.subheader("Squid Path Metrics")
 st.dataframe(df_path, use_container_width=True)
 
-# --- Prepare top 10s ---
-top_vol_path = df_path.nlargest(10, "volume_usd").sort_values("volume_usd", ascending=False)
-top_txn_path = df_path.nlargest(10, "number_of_transfers").sort_values("number_of_transfers", ascending=False)
-top_usr_path = df_path.nlargest(10, "number_of_users").sort_values("number_of_users", ascending=False)
 
-# --- Create charts ---
-fig_vol_path = px.bar(
-    top_vol_path,
-    x="volume_usd",
-    y="path",
-    orientation="h",
-    title="Top 10 Paths by Volume (USD)",
-    labels={"volume_usd": "Volume (USD)", "path": "Path"}
-)
-fig_vol_path.update_xaxes(tickformat=",.0f")
-
-fig_txn_path = px.bar(
-    top_txn_path,
-    x="number_of_transfers",
-    y="path",
-    orientation="h",
-    title="Top 10 Paths by Transfers",
-    labels={"number_of_transfers": "Transfers", "path": "Path"}
-)
-fig_txn_path.update_xaxes(tickformat=",.0f")
-
-fig_usr_path = px.bar(
-    top_usr_path,
-    x="number_of_users",
-    y="path",
-    orientation="h",
-    title="Top 10 Paths by Users",
-    labels={"number_of_users": "Users", "path": "Path"}
-)
-fig_usr_path.update_xaxes(tickformat=",.0f")
-
-# --- Display in one row ---
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.plotly_chart(fig_vol_path, use_container_width=True)
-with col2:
-    st.plotly_chart(fig_txn_path, use_container_width=True)
-with col3:
-    st.plotly_chart(fig_usr_path, use_container_width=True)
