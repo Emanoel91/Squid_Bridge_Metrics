@@ -837,7 +837,7 @@ fig.add_trace(go.Scatter(
 
 # Layout with dual y-axes
 fig.update_layout(
-    title="New/Total Squid Users Over Time",
+    title="New and Total Squid Users Over Time",
     xaxis=dict(title="Date"),
     yaxis=dict(
         title="New Users",
