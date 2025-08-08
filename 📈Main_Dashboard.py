@@ -838,7 +838,7 @@ fig.add_trace(go.Scatter(
 # Layout with dual y-axes
 fig.update_layout(
     title="New/Total Squid Users Over Time",
-    xaxis=dict(title="Date"),
+    xaxis_title="Date",
     yaxis=dict(
         title="New Users",
         titlefont=dict(color='royalblue'),
@@ -857,5 +857,3 @@ fig.update_layout(
     height=500,
     margin=dict(l=50, r=50, t=70, b=50)
 )
-
-st.plotly_chart(fig, use_container_width=True)
