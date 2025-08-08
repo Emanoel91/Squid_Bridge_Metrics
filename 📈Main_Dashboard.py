@@ -789,7 +789,7 @@ def load_new_users_data(timeframe, start_date, end_date):
       GROUP BY 1
     )
     SELECT 
-      date_trunc('{timeframe}', first_date) as "Date", 
+      date_trunc('{timeframe}', first_date) as Date, 
       count(distinct user) as "New Users",
       sum(count(distinct user)) OVER (ORDER BY date_trunc('{timeframe}', first_date)) as "Total New Users"
     FROM overview
@@ -798,55 +798,12 @@ def load_new_users_data(timeframe, start_date, end_date):
     """
 
     df = pd.read_sql(query, conn)
-    df['Date'] = pd.to_datetime(df['Date'])
+
+    if df.empty:
+        # اگر داده‌ای نبود، ستون‌ها رو بساز برای جلوگیری از ارور
+        df = pd.DataFrame(columns=["Date", "New Users", "Total New Users"])
+    else:
+        df['Date'] = pd.to_datetime(df['Date'])
+
     return df
 
-# --- Load Data ----------------------------------------------------------------------------------------------------
-df_users = load_new_users_data(timeframe, start_date, end_date)
-
-# --- Plot Bar-Line Chart -------------------------------------------------------------------------------------------
-fig = go.Figure()
-
-fig.add_trace(go.Bar(
-    x=df_users['Date'],
-    y=df_users['New Users'],
-    name='New Users',
-    marker_color='#e2fb43',
-    yaxis='y1'
-))
-
-fig.add_trace(go.Scatter(
-    x=df_users['Date'],
-    y=df_users['Total New Users'],
-    name='Total New Users',
-    mode='lines+markers',
-    line=dict(color='#ca99e5'),
-    yaxis='y2'
-))
-
-fig.update_layout(
-    title="New/Total Squid Users Over Time",
-    xaxis=dict(title='Date'),
-    yaxis=dict(
-        title='New Users',
-        titlefont=dict(color='#e2fb43'),
-        tickfont=dict(color='#e2fb43'),
-        side='left',
-        showgrid=False,
-    ),
-    yaxis2=dict(
-        title='Total New Users',
-        titlefont=dict(color='#ca99e5'),
-        tickfont=dict(color='#ca99e5'),
-        overlaying='y',
-        side='right',
-        anchor='x',
-        showgrid=False,
-    ),
-    legend=dict(x=0.01, y=0.99),
-    bargap=0.2,
-    template='plotly_white',
-    height=500
-)
-
-st.plotly_chart(fig, use_container_width=True)
