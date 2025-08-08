@@ -785,7 +785,6 @@ def load_new_users_data(timeframe, start_date, end_date):
       )
       SELECT user, min(created_at::date) as first_date
       FROM axelar_service
-      WHERE created_at::date >= '{start_str}' AND created_at::date <= '{end_str}'
       GROUP BY 1
     )
     SELECT 
@@ -810,8 +809,6 @@ def load_new_users_data(timeframe, start_date, end_date):
 
 # --- Load Data ----------------------------------------------------------------------------------------------------------
 df_users = load_new_users_data(timeframe, start_date, end_date)
-
-
 # --- Plot Bar-Line Chart ------------------------------------------------------------------------------------------------
 fig = go.Figure()
 
