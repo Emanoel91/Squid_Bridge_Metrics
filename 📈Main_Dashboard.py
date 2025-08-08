@@ -754,43 +754,50 @@ st.dataframe(df_path, use_container_width=True)
 
 # --- Query Function: Row 8 --------------------------------------------------------------------------------------
 @st.cache_data
-def load_new_users_data(timeframe, start_date, end_date):
+def load_new_total_users(timeframe, start_date, end_date):
     start_str = start_date.strftime("%Y-%m-%d")
     end_str = end_date.strftime("%Y-%m-%d")
 
+    timeframe_map = {
+        "day": "day",
+        "week": "week",
+        "month": "month"
+    }
+    date_trunc_unit = timeframe_map.get(timeframe, "week")
+
     query = f"""
     WITH overview AS (
-      WITH axelar_service AS (
-        SELECT created_at, recipient_address AS user
-        FROM axelar.axelscan.fact_transfers
-        WHERE status = 'executed' AND simplified_status = 'received'
-          AND (
-            sender_address ilike '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%' -- Squid
-            OR sender_address ilike '%0x492751eC3c57141deb205eC2da8bFcb410738630%' -- Squid-blast
-            OR sender_address ilike '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%' -- Squid-fraxtal
-            OR sender_address ilike '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%' -- Squid coral
-            OR sender_address ilike '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%' -- Squid coral hub
-          )
-        UNION ALL
-        SELECT created_at, data:call.transaction.from::STRING AS user
-        FROM axelar.axelscan.fact_gmp 
-        WHERE status = 'executed' AND simplified_status = 'received'
-          AND (
-            data:approved:returnValues:contractAddress ilike '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%' -- Squid
-            OR data:approved:returnValues:contractAddress ilike '%0x492751eC3c57141deb205eC2da8bFcb410738630%' -- Squid-blast
-            OR data:approved:returnValues:contractAddress ilike '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%' -- Squid-fraxtal
-            OR data:approved:returnValues:contractAddress ilike '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%' -- Squid coral
-            OR data:approved:returnValues:contractAddress ilike '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%' -- Squid coral hub
-          )
-      )
-      SELECT user, min(created_at::date) as first_date
-      FROM axelar_service
-      GROUP BY 1
+        WITH axelar_service AS (
+          SELECT created_at, recipient_address AS user
+          FROM axelar.axelscan.fact_transfers
+          WHERE status = 'executed' AND simplified_status = 'received'
+            AND (
+              sender_address ILIKE '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%' OR
+              sender_address ILIKE '%0x492751eC3c57141deb205eC2da8bFcb410738630%' OR
+              sender_address ILIKE '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%' OR
+              sender_address ILIKE '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%' OR
+              sender_address ILIKE '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%'
+            )
+          UNION ALL
+          SELECT created_at, data:call.transaction.from::STRING AS user
+          FROM axelar.axelscan.fact_gmp
+          WHERE status = 'executed' AND simplified_status = 'received'
+            AND (
+              data:approved:returnValues:contractAddress ILIKE '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%' OR
+              data:approved:returnValues:contractAddress ILIKE '%0x492751eC3c57141deb205eC2da8bFcb410738630%' OR
+              data:approved:returnValues:contractAddress ILIKE '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%' OR
+              data:approved:returnValues:contractAddress ILIKE '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%' OR
+              data:approved:returnValues:contractAddress ILIKE '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%'
+            )
+        )
+        SELECT user, MIN(created_at::date) AS first_date
+        FROM axelar_service
+        GROUP BY user
     )
     SELECT 
-      date_trunc('{timeframe}', first_date) as "Date", 
-      count(distinct user) as "New Users",
-      sum(count(distinct user)) over (order by date_trunc('{timeframe}', first_date)) as "Total New Users"
+      date_trunc('{date_trunc_unit}', first_date) AS "Date",
+      COUNT(DISTINCT user) AS "New Users",
+      SUM(COUNT(DISTINCT user)) OVER (ORDER BY date_trunc('{date_trunc_unit}', first_date)) AS "Total New Users"
     FROM overview
     WHERE first_date >= '{start_str}' AND first_date <= '{end_str}'
     GROUP BY 1
@@ -798,59 +805,52 @@ def load_new_users_data(timeframe, start_date, end_date):
     """
 
     df = pd.read_sql(query, conn)
-
-    if df.empty:
-        df = pd.DataFrame(columns=["Date", "New Users", "Total New Users"])
-    else:
-        df['Date'] = pd.to_datetime(df['Date'])
-
     return df
 
 
-# --- Load Data ----------------------------------------------------------------------------------------------------------
-df_users = load_new_users_data(timeframe, start_date, end_date)
-# --- Plot Bar-Line Chart ------------------------------------------------------------------------------------------------
+# --- Load Data ----------------------------------------------------------------------------------------------------
+df_users = load_new_total_users(timeframe, start_date, end_date)
+
+# --- Plotly Chart -------------------------------------------------------------------------------------------------
 fig = go.Figure()
 
-# Bar: New Users (left y-axis)
 fig.add_trace(go.Bar(
     x=df_users["Date"],
     y=df_users["New Users"],
     name="New Users",
     yaxis="y1",
-    marker_color='royalblue'
+    marker_color='steelblue'
 ))
 
-# Line: Total New Users (right y-axis)
 fig.add_trace(go.Scatter(
     x=df_users["Date"],
     y=df_users["Total New Users"],
     name="Total New Users",
     yaxis="y2",
-    mode='lines+markers',
-    line=dict(color='orange', width=2),
-    marker=dict(size=6)
+    mode="lines+markers",
+    line=dict(color='firebrick', width=2)
 ))
 
-# Layout with dual y-axes
 fig.update_layout(
     title="New/Total Squid Users Over Time",
-    xaxis_title="Date",
+    xaxis=dict(title="Date"),
     yaxis=dict(
         title="New Users",
-        titlefont=dict(color='royalblue'),
-        tickfont=dict(color='royalblue'),
+        showgrid=False,
+        zeroline=False,
         side='left'
     ),
     yaxis2=dict(
         title="Total New Users",
-        titlefont=dict(color='orange'),
-        tickfont=dict(color='orange'),
         overlaying='y',
-        side='right'
+        side='right',
+        showgrid=False,
+        zeroline=False
     ),
     legend=dict(x=0.01, y=0.99),
-    bargap=0.15,
-    height=500,
-    margin=dict(l=50, r=50, t=70, b=50)
+    bargap=0.2,
+    template="plotly_white",
+    height=500
 )
+
+st.plotly_chart(fig, use_container_width=True)
