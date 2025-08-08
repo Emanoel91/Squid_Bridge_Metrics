@@ -597,3 +597,15 @@ fig_users_dest = px.bar(
 st.plotly_chart(fig_vol_dest, use_container_width=True)
 st.plotly_chart(fig_trans_dest, use_container_width=True)
 st.plotly_chart(fig_users_dest, use_container_width=True)
+
+# --- Charts in one row ---
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.plotly_chart(fig_vol_dest, use_container_width=True)
+
+with col2:
+    st.plotly_chart(fig_trans_dest, use_container_width=True)
+
+with col3:
+    st.plotly_chart(fig_users_dest, use_container_width=True)
