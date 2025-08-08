@@ -462,3 +462,138 @@ with col3:
                   title="Top 10 Source Chains by Users")
     st.plotly_chart(fig3, use_container_width=True)
 
+# --- Destination Chain Data Query: Row 5, 6 --------------------------------------------------------------------------------------------------------------
+query_destination = f"""
+WITH axelar_service AS (
+    SELECT 
+        created_at, 
+        LOWER(data:send:original_source_chain) AS source_chain, 
+        LOWER(data:send:original_destination_chain) AS destination_chain,
+        recipient_address AS user, 
+        CASE 
+            WHEN IS_ARRAY(data:send:amount) THEN NULL
+            WHEN IS_OBJECT(data:send:amount) THEN NULL
+            WHEN TRY_TO_DOUBLE(data:send:amount::STRING) IS NOT NULL THEN TRY_TO_DOUBLE(data:send:amount::STRING)
+            ELSE NULL
+        END AS amount,
+        CASE 
+            WHEN IS_ARRAY(data:send:amount) OR IS_ARRAY(data:link:price) THEN NULL
+            WHEN IS_OBJECT(data:send:amount) OR IS_OBJECT(data:link:price) THEN NULL
+            WHEN TRY_TO_DOUBLE(data:send:amount::STRING) IS NOT NULL AND TRY_TO_DOUBLE(data:link:price::STRING) IS NOT NULL 
+                THEN TRY_TO_DOUBLE(data:send:amount::STRING) * TRY_TO_DOUBLE(data:link:price::STRING)
+            ELSE NULL
+        END AS amount_usd,
+        CASE 
+            WHEN IS_ARRAY(data:send:fee_value) THEN NULL
+            WHEN IS_OBJECT(data:send:fee_value) THEN NULL
+            WHEN TRY_TO_DOUBLE(data:send:fee_value::STRING) IS NOT NULL THEN TRY_TO_DOUBLE(data:send:fee_value::STRING)
+            ELSE NULL
+        END AS fee,
+        id, 
+        'Token Transfers' AS "Service", 
+        data:link:asset::STRING AS raw_asset
+    FROM axelar.axelscan.fact_transfers
+    WHERE status = 'executed'
+      AND simplified_status = 'received'
+      AND created_at BETWEEN '{start_date}' AND '{end_date}'
+      AND (
+          sender_address ILIKE '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%'
+          OR sender_address ILIKE '%0x492751eC3c57141deb205eC2da8bFcb410738630%'
+          OR sender_address ILIKE '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%'
+          OR sender_address ILIKE '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%'
+          OR sender_address ILIKE '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%'
+      )
+    UNION ALL
+    SELECT  
+        created_at,
+        data:call.chain::STRING AS source_chain,
+        data:call.returnValues.destinationChain::STRING AS destination_chain,
+        data:call.transaction.from::STRING AS user,
+        CASE 
+            WHEN IS_ARRAY(data:amount) OR IS_OBJECT(data:amount) THEN NULL
+            WHEN TRY_TO_DOUBLE(data:amount::STRING) IS NOT NULL THEN TRY_TO_DOUBLE(data:amount::STRING)
+            ELSE NULL
+        END AS amount,
+        CASE 
+            WHEN IS_ARRAY(data:value) OR IS_OBJECT(data:value) THEN NULL
+            WHEN TRY_TO_DOUBLE(data:value::STRING) IS NOT NULL THEN TRY_TO_DOUBLE(data:value::STRING)
+            ELSE NULL
+        END AS amount_usd,
+        COALESCE(
+            CASE 
+                WHEN IS_ARRAY(data:gas:gas_used_amount) OR IS_OBJECT(data:gas:gas_used_amount) 
+                  OR IS_ARRAY(data:gas_price_rate:source_token.token_price.usd) OR IS_OBJECT(data:gas_price_rate:source_token.token_price.usd) 
+                THEN NULL
+                WHEN TRY_TO_DOUBLE(data:gas:gas_used_amount::STRING) IS NOT NULL 
+                  AND TRY_TO_DOUBLE(data:gas_price_rate:source_token.token_price.usd::STRING) IS NOT NULL 
+                THEN TRY_TO_DOUBLE(data:gas:gas_used_amount::STRING) * TRY_TO_DOUBLE(data:gas_price_rate:source_token.token_price.usd::STRING)
+                ELSE NULL
+            END,
+            CASE 
+                WHEN IS_ARRAY(data:fees:express_fee_usd) OR IS_OBJECT(data:fees:express_fee_usd) THEN NULL
+                WHEN TRY_TO_DOUBLE(data:fees:express_fee_usd::STRING) IS NOT NULL THEN TRY_TO_DOUBLE(data:fees:express_fee_usd::STRING)
+                ELSE NULL
+            END
+        ) AS fee,
+        id, 
+        'GMP' AS "Service", 
+        data:symbol::STRING AS raw_asset
+    FROM axelar.axelscan.fact_gmp 
+    WHERE status = 'executed'
+      AND simplified_status = 'received'
+      AND created_at BETWEEN '{start_date}' AND '{end_date}'
+      AND (
+          data:approved:returnValues:contractAddress ILIKE '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%'
+          OR data:approved:returnValues:contractAddress ILIKE '%0x492751eC3c57141deb205eC2da8bFcb410738630%'
+          OR data:approved:returnValues:contractAddress ILIKE '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%'
+          OR data:approved:returnValues:contractAddress ILIKE '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%'
+          OR data:approved:returnValues:contractAddress ILIKE '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%'
+      )
+)
+SELECT destination_chain AS "Destination Chain", 
+       COUNT(DISTINCT id) AS "Number of Transfers", 
+       COUNT(DISTINCT user) AS "Number of Users", 
+       ROUND(SUM(amount_usd)) AS "Volume of Transfers (USD)"
+FROM axelar_service
+GROUP BY 1
+ORDER BY 1;
+"""
+
+df_destination = pd.read_sql(query_destination, conn)
+
+# Display table
+st.subheader("📍 Destination Chain Transfers Summary")
+st.dataframe(df_destination)
+
+# --- Charts ---
+top_volume_dest = df_destination.nlargest(10, "Volume of Transfers (USD)")
+top_transfers_dest = df_destination.nlargest(10, "Number of Transfers")
+top_users_dest = df_destination.nlargest(10, "Number of Users")
+
+fig_vol_dest = px.bar(
+    top_volume_dest.sort_values("Volume of Transfers (USD)"),
+    x="Volume of Transfers (USD)", 
+    y="Destination Chain", 
+    orientation="h",
+    title="Top 10 Destination Chains by Volume (USD)"
+)
+
+fig_trans_dest = px.bar(
+    top_transfers_dest.sort_values("Number of Transfers"),
+    x="Number of Transfers", 
+    y="Destination Chain", 
+    orientation="h",
+    title="Top 10 Destination Chains by Number of Transfers"
+)
+
+fig_users_dest = px.bar(
+    top_users_dest.sort_values("Number of Users"),
+    x="Number of Users", 
+    y="Destination Chain", 
+    orientation="h",
+    title="Top 10 Destination Chains by Number of Users"
+)
+
+st.plotly_chart(fig_vol_dest, use_container_width=True)
+st.plotly_chart(fig_trans_dest, use_container_width=True)
+st.plotly_chart(fig_users_dest, use_container_width=True)
