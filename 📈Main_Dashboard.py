@@ -636,3 +636,162 @@ with col2:
     st.plotly_chart(fig_txn_dest, use_container_width=True)
 with col3:
     st.plotly_chart(fig_usr_dest, use_container_width=True)
+
+# --- Cached loader for Path metrics: Row 7, 8 ----------------------------------------------------------------------------------------------------------------------
+@st.cache_data
+def load_path_data(start_date, end_date):
+    start_str = pd.to_datetime(start_date).strftime("%Y-%m-%d")
+    end_str = pd.to_datetime(end_date).strftime("%Y-%m-%d")
+
+    query = f"""
+    WITH axelar_service AS (
+      SELECT 
+        created_at, 
+        LOWER(data:send:original_source_chain) AS source_chain, 
+        LOWER(data:send:original_destination_chain) AS destination_chain,
+        recipient_address AS user, 
+        CASE 
+          WHEN IS_ARRAY(data:send:amount) THEN NULL
+          WHEN IS_OBJECT(data:send:amount) THEN NULL
+          WHEN TRY_TO_DOUBLE(data:send:amount::STRING) IS NOT NULL THEN TRY_TO_DOUBLE(data:send:amount::STRING)
+          ELSE NULL
+        END AS amount,
+        CASE 
+          WHEN IS_ARRAY(data:send:amount) OR IS_ARRAY(data:link:price) THEN NULL
+          WHEN IS_OBJECT(data:send:amount) OR IS_OBJECT(data:link:price) THEN NULL
+          WHEN TRY_TO_DOUBLE(data:send:amount::STRING) IS NOT NULL AND TRY_TO_DOUBLE(data:link:price::STRING) IS NOT NULL 
+            THEN TRY_TO_DOUBLE(data:send:amount::STRING) * TRY_TO_DOUBLE(data:link:price::STRING)
+          ELSE NULL
+        END AS amount_usd,
+        CASE 
+          WHEN IS_ARRAY(data:send:fee_value) THEN NULL
+          WHEN IS_OBJECT(data:send:fee_value) THEN NULL
+          WHEN TRY_TO_DOUBLE(data:send:fee_value::STRING) IS NOT NULL THEN TRY_TO_DOUBLE(data:send:fee_value::STRING)
+          ELSE NULL
+        END AS fee,
+        id, 
+        'Token Transfers' AS "Service", 
+        data:link:asset::STRING AS raw_asset
+      FROM axelar.axelscan.fact_transfers
+      WHERE status = 'executed'
+        AND simplified_status = 'received'
+        AND created_at::date >= '{start_str}'
+        AND created_at::date <= '{end_str}'
+        AND (
+          sender_address ILIKE '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%'
+          OR sender_address ILIKE '%0x492751eC3c57141deb205eC2da8bFcb410738630%'
+          OR sender_address ILIKE '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%'
+          OR sender_address ILIKE '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%'
+          OR sender_address ILIKE '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%'
+        )
+      UNION ALL
+      SELECT  
+        created_at,
+        data:call.chain::STRING AS source_chain,
+        data:call.returnValues.destinationChain::STRING AS destination_chain,
+        data:call.transaction.from::STRING AS user,
+        CASE 
+          WHEN IS_ARRAY(data:amount) OR IS_OBJECT(data:amount) THEN NULL
+          WHEN TRY_TO_DOUBLE(data:amount::STRING) IS NOT NULL THEN TRY_TO_DOUBLE(data:amount::STRING)
+          ELSE NULL
+        END AS amount,
+        CASE 
+          WHEN IS_ARRAY(data:value) OR IS_OBJECT(data:value) THEN NULL
+          WHEN TRY_TO_DOUBLE(data:value::STRING) IS NOT NULL THEN TRY_TO_DOUBLE(data:value::STRING)
+          ELSE NULL
+        END AS amount_usd,
+        COALESCE(
+          CASE 
+            WHEN IS_ARRAY(data:gas:gas_used_amount) OR IS_OBJECT(data:gas:gas_used_amount) 
+              OR IS_ARRAY(data:gas_price_rate:source_token.token_price.usd) OR IS_OBJECT(data:gas_price_rate:source_token.token_price.usd) 
+            THEN NULL
+            WHEN TRY_TO_DOUBLE(data:gas:gas_used_amount::STRING) IS NOT NULL 
+              AND TRY_TO_DOUBLE(data:gas_price_rate:source_token.token_price.usd::STRING) IS NOT NULL 
+            THEN TRY_TO_DOUBLE(data:gas:gas_used_amount::STRING) * TRY_TO_DOUBLE(data:gas_price_rate:source_token.token_price.usd::STRING)
+            ELSE NULL
+          END,
+          CASE 
+            WHEN IS_ARRAY(data:fees:express_fee_usd) OR IS_OBJECT(data:fees:express_fee_usd) THEN NULL
+            WHEN TRY_TO_DOUBLE(data:fees:express_fee_usd::STRING) IS NOT NULL THEN TRY_TO_DOUBLE(data:fees:express_fee_usd::STRING)
+            ELSE NULL
+          END
+        ) AS fee,
+        id, 
+        'GMP' AS "Service", 
+        data:symbol::STRING AS raw_asset
+      FROM axelar.axelscan.fact_gmp 
+      WHERE status = 'executed'
+        AND simplified_status = 'received'
+        AND created_at::date >= '{start_str}'
+        AND created_at::date <= '{end_str}'
+        AND (
+          data:approved:returnValues:contractAddress ILIKE '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%'
+          OR data:approved:returnValues:contractAddress ILIKE '%0x492751eC3c57141deb205eC2da8bFcb410738630%'
+          OR data:approved:returnValues:contractAddress ILIKE '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%'
+          OR data:approved:returnValues:contractAddress ILIKE '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%'
+          OR data:approved:returnValues:contractAddress ILIKE '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%'
+        )
+    )
+    SELECT 
+      source_chain || '➡' || destination_chain AS path, 
+      COUNT(DISTINCT id) AS number_of_transfers, 
+      COUNT(DISTINCT user) AS number_of_users, 
+      ROUND(SUM(amount_usd)) AS volume_usd
+    FROM axelar_service
+    GROUP BY 1
+    ORDER BY number_of_transfers DESC
+    """
+
+    return pd.read_sql(query, conn)
+
+# --- Load data ---
+df_path = load_path_data(start_date, end_date)
+
+# --- Show table ---
+st.subheader("Squid Path Metrics")
+st.dataframe(df_path, use_container_width=True)
+
+# --- Prepare top 10s ---
+top_vol_path = df_path.nlargest(10, "volume_usd").sort_values("volume_usd", ascending=False)
+top_txn_path = df_path.nlargest(10, "number_of_transfers").sort_values("number_of_transfers", ascending=False)
+top_usr_path = df_path.nlargest(10, "number_of_users").sort_values("number_of_users", ascending=False)
+
+# --- Create charts ---
+fig_vol_path = px.bar(
+    top_vol_path,
+    x="volume_usd",
+    y="path",
+    orientation="h",
+    title="Top 10 Paths by Volume (USD)",
+    labels={"volume_usd": "Volume (USD)", "path": "Path"}
+)
+fig_vol_path.update_xaxes(tickformat=",.0f")
+
+fig_txn_path = px.bar(
+    top_txn_path,
+    x="number_of_transfers",
+    y="path",
+    orientation="h",
+    title="Top 10 Paths by Transfers",
+    labels={"number_of_transfers": "Transfers", "path": "Path"}
+)
+fig_txn_path.update_xaxes(tickformat=",.0f")
+
+fig_usr_path = px.bar(
+    top_usr_path,
+    x="number_of_users",
+    y="path",
+    orientation="h",
+    title="Top 10 Paths by Users",
+    labels={"number_of_users": "Users", "path": "Path"}
+)
+fig_usr_path.update_xaxes(tickformat=",.0f")
+
+# --- Display in one row ---
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.plotly_chart(fig_vol_path, use_container_width=True)
+with col2:
+    st.plotly_chart(fig_txn_path, use_container_width=True)
+with col3:
+    st.plotly_chart(fig_usr_path, use_container_width=True)
