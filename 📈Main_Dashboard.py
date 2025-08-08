@@ -789,7 +789,7 @@ def load_new_users_data(timeframe, start_date, end_date):
       GROUP BY 1
     )
     SELECT 
-      date_trunc('{timeframe}', first_date) as Date, 
+      date_trunc('{timeframe}', first_date) as "Date", 
       count(distinct user) as "New Users",
       sum(count(distinct user)) OVER (ORDER BY date_trunc('{timeframe}', first_date)) as "Total New Users"
     FROM overview
