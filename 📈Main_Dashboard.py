@@ -468,6 +468,7 @@ with col1:
         x="Volume of Transfers (USD)", y="Source Chain",
         orientation="h",
         title="Top 10 Source Chains by Volume (USD)",
+        labels={"Volume of Transfers (USD)": "USD", "Source Chain": " "},
         color_discrete_sequence=["#ca99e5"]
     )
     st.plotly_chart(fig1, use_container_width=True)
@@ -478,6 +479,7 @@ with col2:
         x="Number of Transfers", y="Source Chain",
         orientation="h",
         title="Top 10 Source Chains by Transfers",
+        labels={"Number of Transfers": "Txns count", "Source Chain": " "},
         color_discrete_sequence=["#ca99e5"]
     )
     st.plotly_chart(fig2, use_container_width=True)
@@ -488,6 +490,7 @@ with col3:
         x="Number of Users", y="Source Chain",
         orientation="h",
         title="Top 10 Source Chains by Users",
+        labels={"Number of Users": "Address count", "Source Chain": " "},
         color_discrete_sequence=["#ca99e5"]
     )
     st.plotly_chart(fig3, use_container_width=True)
