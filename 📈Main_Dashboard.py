@@ -605,10 +605,10 @@ def load_destination_data(start_date, end_date):
 
     # normalize column names for easier downstream use
     df = df.rename(columns={
-        "Destination Chain": "destination_chain",
-        "Number of Transfers": "number_of_transfers",
-        "Number of Users": "number_of_users",
-        "Volume of Transfers (USD)": "volume_usd"
+        "Destination Chain": "Destination Chain",
+        "Number of Transfers": "Number of Transfers",
+        "Number of Users": "Number of Users",
+        "Volume of Transfers (USD)": "Number of Transfers (USD)"
     })
 
     return df
