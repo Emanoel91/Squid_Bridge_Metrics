@@ -790,8 +790,11 @@ def load_path_data(start_date, end_date):
 df_path = load_path_data(start_date, end_date)
 
 # --- Show table ---
-st.subheader("Squid Path Metrics")
-st.dataframe(df_path, use_container_width=True)
+st.subheader("🔀Squid Activity by Path")
+df_display = df_path.copy()
+df_display.index = df_display.index + 1
+df_display = df_display.applymap(lambda x: f"{x:,}" if isinstance(x, (int, float)) else x)
+st.dataframe(df_display, use_container_width=True)
 
 # --- Query Function: Row 8 --------------------------------------------------------------------------------------
 @st.cache_data
