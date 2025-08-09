@@ -601,7 +601,7 @@ def load_destination_data(start_date, end_date):
       ROUND(SUM(amount_usd)) AS "Volume of Transfers (USD)"
     FROM axelar_service
     GROUP BY 1
-    ORDER BY "Volume of Transfers (USD)" DESC
+    ORDER BY "Number of Transfers" DESC
     """
 
     df = pd.read_sql(query, conn)
@@ -776,12 +776,12 @@ def load_path_data(start_date, end_date):
     )
     SELECT 
       source_chain || '➡' || destination_chain AS path, 
-      COUNT(DISTINCT id) AS number_of_transfers, 
-      COUNT(DISTINCT user) AS number_of_users, 
-      ROUND(SUM(amount_usd)) AS volume_usd
+      COUNT(DISTINCT id) AS "Number of Transfers", 
+      COUNT(DISTINCT user) AS "Number of Users", 
+      ROUND(SUM(amount_usd)) AS "Volume of Transfers USD"
     FROM axelar_service
     GROUP BY 1
-    ORDER BY number_of_transfers DESC
+    ORDER BY 2 DESC
     """
 
     return pd.read_sql(query, conn)
