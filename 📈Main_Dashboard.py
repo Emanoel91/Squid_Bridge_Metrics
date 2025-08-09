@@ -616,9 +616,13 @@ def load_destination_data(start_date, end_date):
 # --- Use the cached loader ---------------------------------------------------------
 df_dest = load_destination_data(start_date, end_date)
 
-# --- show table ---
-st.subheader("Destination Chain Metrics")
+# --- show table -----------------------------------------------------------------
+st.subheader("📥Squid Activity by Destination Chain")
 st.dataframe(df_dest, use_container_width=True)
+df_display = df_dest.copy()
+df_display.index = df_display.index + 1
+df_display = df_display.applymap(lambda x: f"{x:,}" if isinstance(x, (int, float)) else x)
+st.dataframe(df_display, use_container_width=True)
 
 # --- prepare top-10s and charts (horizontal bars) ------------------------------------
 top_vol_dest = df_dest.nlargest(10, "volume_usd").sort_values("volume_usd", ascending=False)
@@ -631,7 +635,8 @@ fig_vol_dest = px.bar(
     y="destination_chain",
     orientation="h",
     title="Top 10 Destination Chains by Volume (USD)",
-    labels={"volume_usd": "Volume (USD)", "destination_chain": "Destination Chain"}
+    labels={"volume_usd": "Volume (USD)", "destination_chain": "Destination Chain"},
+    color_discrete_sequence=["#ca99e5"]
 )
 fig_vol_dest.update_xaxes(tickformat=",.0f")
 fig_vol_dest.update_traces(hovertemplate="%{y}: $%{x:,.0f}<extra></extra>")
@@ -642,7 +647,8 @@ fig_txn_dest = px.bar(
     y="destination_chain",
     orientation="h",
     title="Top 10 Destination Chains by Transfers",
-    labels={"number_of_transfers": "Txns", "destination_chain": "Destination Chain"}
+    labels={"number_of_transfers": "Txns", "destination_chain": "Destination Chain"},
+    color_discrete_sequence=["#ca99e5"]
 )
 fig_txn_dest.update_xaxes(tickformat=",.0f")
 fig_txn_dest.update_traces(hovertemplate="%{y}: %{x:,}<extra></extra>")
@@ -653,7 +659,8 @@ fig_usr_dest = px.bar(
     y="destination_chain",
     orientation="h",
     title="Top 10 Destination Chains by Users",
-    labels={"number_of_users": "Addresses", "destination_chain": "Destination Chain"}
+    labels={"number_of_users": "Addresses", "destination_chain": "Destination Chain"},
+    color_discrete_sequence=["#ca99e5"]
 )
 fig_usr_dest.update_xaxes(tickformat=",.0f")
 fig_usr_dest.update_traces(hovertemplate="%{y}: %{x:,}<extra></extra>")
