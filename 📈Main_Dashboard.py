@@ -608,7 +608,7 @@ def load_destination_data(start_date, end_date):
         "Destination Chain": "Destination Chain",
         "Number of Transfers": "Number of Transfers",
         "Number of Users": "Number of Users",
-        "Volume of Transfers (USD)": "Number of Transfers (USD)"
+        "Volume of Transfers (USD)": "Volume of Transfers (USD)"
     })
 
     return df
@@ -624,30 +624,30 @@ df_display = df_display.applymap(lambda x: f"{x:,}" if isinstance(x, (int, float
 st.dataframe(df_display, use_container_width=True)
 
 # --- prepare top-10s and charts (horizontal bars) ------------------------------------
-top_vol_dest = df_dest.nlargest(10, "volume_usd").sort_values("volume_usd", ascending=False)
-top_txn_dest = df_dest.nlargest(10, "number_of_transfers").sort_values("number_of_transfers", ascending=False)
-top_usr_dest = df_dest.nlargest(10, "number_of_users").sort_values("number_of_users", ascending=False)
+top_vol_dest = df_dest.nlargest(10, "Volume of Transfers (USD)").sort_values("Volume of Transfers (USD)", ascending=False)
+top_txn_dest = df_dest.nlargest(10, "Number of Transfers").sort_values("Number of Transfers", ascending=False)
+top_usr_dest = df_dest.nlargest(10, "Number of Users").sort_values("Number of Users", ascending=False)
 
 fig_vol_dest = px.bar(
     top_vol_dest,
-    x="volume_usd",
-    y="destination_chain",
+    x="Volume of Transfers (USD)",
+    y="Destination Chain",
     orientation="h",
     title="Top 10 Destination Chains by Volume (USD)",
-    labels={"volume_usd": "Volume (USD)", "destination_chain": "Destination Chain"},
+    labels={"Volume of Transfers (USD)": "USD", "Destination Chain": " "},
     color_discrete_sequence=["#ca99e5"]
 )
 fig_vol_dest.update_xaxes(tickformat=",.0f")
 fig_vol_dest.update_traces(hovertemplate="%{y}: $%{x:,.0f}<extra></extra>")
-fig_vol_dest.update_yaxes(autorange="reversed")  # ترتیب از بالا به پایین کاهشی
+fig_vol_dest.update_yaxes(autorange="reversed")  
 
 fig_txn_dest = px.bar(
     top_txn_dest,
-    x="number_of_transfers",
-    y="destination_chain",
+    x="Number of Transfers",
+    y="Destination Chain",
     orientation="h",
     title="Top 10 Destination Chains by Transfers",
-    labels={"number_of_transfers": "Txns", "destination_chain": "Destination Chain"},
+    labels={"Number of Transfers": "Txns count", "Destination Chain": " "},
     color_discrete_sequence=["#ca99e5"]
 )
 fig_txn_dest.update_xaxes(tickformat=",.0f")
@@ -656,11 +656,11 @@ fig_txn_dest.update_yaxes(autorange="reversed")
 
 fig_usr_dest = px.bar(
     top_usr_dest,
-    x="number_of_users",
-    y="destination_chain",
+    x="Number of Users",
+    y="Destination Chain",
     orientation="h",
     title="Top 10 Destination Chains by Users",
-    labels={"number_of_users": "Addresses", "destination_chain": "Destination Chain"},
+    labels={"Number of Users": "Addresses count", "Destination Chain": " "},
     color_discrete_sequence=["#ca99e5"]
 )
 fig_usr_dest.update_xaxes(tickformat=",.0f")
