@@ -618,7 +618,6 @@ df_dest = load_destination_data(start_date, end_date)
 
 # --- show table -----------------------------------------------------------------
 st.subheader("📥Squid Activity by Destination Chain")
-st.dataframe(df_dest, use_container_width=True)
 df_display = df_dest.copy()
 df_display.index = df_display.index + 1
 df_display = df_display.applymap(lambda x: f"{x:,}" if isinstance(x, (int, float)) else x)
