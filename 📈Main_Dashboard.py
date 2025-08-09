@@ -448,8 +448,12 @@ def load_source_chain_data(start_date, end_date):
 df_source = load_source_chain_data(start_date, end_date)
 
 # --- Display Table ------------------------------------------------------------------------------------------------
-st.subheader("Squid Activity by Source Chain")
-st.dataframe(df_source, use_container_width=True)
+st.subheader("📤Squid Activity by Source Chain")
+
+df_display = df_source.copy()
+df_display.index = df_display.index + 1
+df_display = df_display.applymap(lambda x: f"{x:,}" if isinstance(x, (int, float)) else x)
+st.dataframe(df_display, use_container_width=True)
 
 # --- Top 10 Horizontal Bar Charts ----------------------------------------------------------------------------------
 top_vol = df_source.nlargest(10, "Volume of Transfers (USD)")
