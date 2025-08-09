@@ -298,23 +298,38 @@ df_ts = load_time_series_data(timeframe, start_date, end_date)
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    fig1 = px.bar(df_ts, x="DATE", y="VOLUME_OF_TRANSFERS",
-                  title="Squid Bridge Volume Over Time (USD)",
-                  labels={"VOLUME_OF_TRANSFERS": "Volume (USD)", "DATE": "Date"})
+    fig1 = px.bar(
+        df_ts,
+        x="DATE",
+        y="VOLUME_OF_TRANSFERS",
+        title="Squid Bridge Volume Over Time (USD)",
+        labels={"VOLUME_OF_TRANSFERS": "Volume (USD)", "DATE": "Date"},
+        color_discrete_sequence=["#e2fb43"]
+    )
     fig1.update_layout(xaxis_title="", yaxis_title="USD", bargap=0.2)
     st.plotly_chart(fig1, use_container_width=True)
 
 with col2:
-    fig2 = px.bar(df_ts, x="DATE", y="NUMBER_OF_TRANSFERS",
-                  title="Squid Bridge Transactions Over Time",
-                  labels={"NUMBER_OF_TRANSFERS": "Transactions", "DATE": "Date"})
+    fig2 = px.bar(
+        df_ts,
+        x="DATE",
+        y="NUMBER_OF_TRANSFERS",
+        title="Squid Bridge Transactions Over Time",
+        labels={"NUMBER_OF_TRANSFERS": "Transactions", "DATE": "Date"},
+        color_discrete_sequence=["#e2fb43"]
+    )
     fig2.update_layout(xaxis_title="", yaxis_title="Txns", bargap=0.2)
     st.plotly_chart(fig2, use_container_width=True)
 
 with col3:
-    fig3 = px.bar(df_ts, x="DATE", y="NUMBER_OF_USERS",
-                  title="Squid Bridge Users Over Time",
-                  labels={"NUMBER_OF_USERS": "Users", "DATE": "Date"})
+    fig3 = px.bar(
+        df_ts,
+        x="DATE",
+        y="NUMBER_OF_USERS",
+        title="Squid Bridge Users Over Time",
+        labels={"NUMBER_OF_USERS": "Users", "DATE": "Date"},
+        color_discrete_sequence=["#e2fb43"]
+    )
     fig3.update_layout(xaxis_title="", yaxis_title="Addresses", bargap=0.2)
     st.plotly_chart(fig3, use_container_width=True)
 
