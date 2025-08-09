@@ -439,7 +439,7 @@ def load_source_chain_data(start_date, end_date):
            ROUND(SUM(amount_usd)) AS "Volume of Transfers (USD)"
     FROM axelar_service
     GROUP BY 1
-    ORDER BY 4 DESC
+    ORDER BY 2 DESC
     """
 
     return pd.read_sql(query, conn)
