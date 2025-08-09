@@ -863,7 +863,7 @@ fig.add_trace(go.Bar(
     y=df_users["New Users"],
     name="New Users",
     yaxis="y1",
-    marker_color='steelblue'
+    marker_color="#e2fb43"  
 ))
 
 fig.add_trace(go.Scatter(
@@ -872,7 +872,7 @@ fig.add_trace(go.Scatter(
     name="Total New Users",
     yaxis="y2",
     mode="lines+markers",
-    line=dict(color='firebrick', width=2)
+    line=dict(color="#ca99e5", width=2)  
 ))
 
 fig.update_layout(
@@ -898,6 +898,7 @@ fig.update_layout(
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------
 @st.cache_data
