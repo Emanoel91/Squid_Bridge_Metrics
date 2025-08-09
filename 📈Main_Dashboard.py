@@ -3,6 +3,7 @@ import pandas as pd
 import snowflake.connector
 import plotly.graph_objects as go
 import plotly.express as px
+import plotly.graph_objects as go
 
 # --- Page Config ------------------------------------------------------------------------------------------------------
 st.set_page_config(
@@ -854,3 +855,177 @@ fig.update_layout(
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
+# -----------------------------------------------------------------------------------------------------------------------------------------------------
+@st.cache_data
+def load_user_distribution_by_volume(start_date, end_date):
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    query = f"""
+    WITH overview as (
+      WITH axelar_service AS (
+        SELECT created_at, recipient_address AS user, CASE 
+            WHEN IS_ARRAY(data:send:amount) OR IS_ARRAY(data:link:price) THEN NULL
+            WHEN IS_OBJECT(data:send:amount) OR IS_OBJECT(data:link:price) THEN NULL
+            WHEN TRY_TO_DOUBLE(data:send:amount::STRING) IS NOT NULL AND TRY_TO_DOUBLE(data:link:price::STRING) IS NOT NULL 
+              THEN TRY_TO_DOUBLE(data:send:amount::STRING) * TRY_TO_DOUBLE(data:link:price::STRING)
+            ELSE NULL
+          END AS amount_usd
+        FROM axelar.axelscan.fact_transfers
+        WHERE status = 'executed' AND simplified_status = 'received'
+          AND (
+          sender_address ilike '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%'
+          or sender_address ilike '%0x492751eC3c57141deb205eC2da8bFcb410738630%'
+          or sender_address ilike '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%'
+          or sender_address ilike '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%'
+          or sender_address ilike '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%'
+          )
+          AND created_at::date >= '{start_str}' AND created_at::date <= '{end_str}'
+
+        UNION ALL
+
+        SELECT  
+          created_at,
+          data:call.transaction.from::STRING AS user, CASE 
+            WHEN IS_ARRAY(data:value) OR IS_OBJECT(data:value) THEN NULL
+            WHEN TRY_TO_DOUBLE(data:value::STRING) IS NOT NULL THEN TRY_TO_DOUBLE(data:value::STRING)
+            ELSE NULL
+          END AS amount_usd
+        FROM axelar.axelscan.fact_gmp 
+        WHERE status = 'executed' AND simplified_status = 'received'
+          AND (
+              data:approved:returnValues:contractAddress ilike '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%'
+              or data:approved:returnValues:contractAddress ilike '%0x492751eC3c57141deb205eC2da8bFcb410738630%'
+              or data:approved:returnValues:contractAddress ilike '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%'
+              or data:approved:returnValues:contractAddress ilike '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%'
+              or data:approved:returnValues:contractAddress ilike '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%'
+          )
+          AND created_at::date >= '{start_str}' AND created_at::date <= '{end_str}'
+      )
+      SELECT user, 
+        CASE 
+          WHEN SUM(amount_usd) <= 100 THEN 'a/ below 100$'
+          WHEN SUM(amount_usd) > 100 AND SUM(amount_usd) <= 1000 THEN 'b/ 100-1k$'
+          WHEN SUM(amount_usd) > 1000 AND SUM(amount_usd) <= 10000 THEN 'c/ 1k-10k$'
+          WHEN SUM(amount_usd) > 10000 AND SUM(amount_usd) <= 100000 THEN 'd/ 10k-100k$'
+          WHEN SUM(amount_usd) > 100000 AND SUM(amount_usd) <= 1000000 THEN 'e/ 100k-1M$'
+          WHEN SUM(amount_usd) > 1000000 THEN 'f/ 1M+$'
+        END AS "Class"
+      FROM axelar_service
+      GROUP BY user
+    )
+    SELECT "Class", COUNT(DISTINCT user) AS "Number of Users"
+    FROM overview
+    WHERE "Class" IS NOT NULL
+    GROUP BY 1
+    ORDER BY 2 DESC
+    """
+
+    df = pd.read_sql(query, conn)
+    return df
+
+@st.cache_data
+def load_user_distribution_by_active_days(start_date, end_date):
+    start_str = start_date.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
+    query = f"""
+    WITH overview as (
+      WITH axelar_service AS (
+        SELECT created_at, recipient_address AS user, id
+        FROM axelar.axelscan.fact_transfers
+        WHERE status = 'executed' AND simplified_status = 'received'
+          AND (
+          sender_address ilike '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%'
+          or sender_address ilike '%0x492751eC3c57141deb205eC2da8bFcb410738630%'
+          or sender_address ilike '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%'
+          or sender_address ilike '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%'
+          or sender_address ilike '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%'
+          )
+          AND created_at::date >= '{start_str}' AND created_at::date <= '{end_str}'
+
+        UNION ALL
+
+        SELECT  
+          created_at,
+          data:call.transaction.from::STRING AS user, id
+        FROM axelar.axelscan.fact_gmp 
+        WHERE status = 'executed' AND simplified_status = 'received'
+          AND (
+              data:approved:returnValues:contractAddress ilike '%0xce16F69375520ab01377ce7B88f5BA8C48F8D666%'
+              or data:approved:returnValues:contractAddress ilike '%0x492751eC3c57141deb205eC2da8bFcb410738630%'
+              or data:approved:returnValues:contractAddress ilike '%0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9%'
+              or data:approved:returnValues:contractAddress ilike '%0xdf4fFDa22270c12d0b5b3788F1669D709476111E%'
+              or data:approved:returnValues:contractAddress ilike '%0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8%'
+          )
+          AND created_at::date >= '{start_str}' AND created_at::date <= '{end_str}'
+      )
+      SELECT user, COUNT(DISTINCT DATE(created_at)) AS active_days_count,
+        CASE 
+          WHEN COUNT(DISTINCT DATE(created_at)) = 1 THEN 'a/ 1 Day'
+          WHEN COUNT(DISTINCT DATE(created_at)) BETWEEN 2 AND 5 THEN 'b/ 2-5 Days'
+          WHEN COUNT(DISTINCT DATE(created_at)) BETWEEN 6 AND 10 THEN 'c/ 6-10 Days'
+          WHEN COUNT(DISTINCT DATE(created_at)) BETWEEN 11 AND 25 THEN 'd/ 11-25 Days'
+          WHEN COUNT(DISTINCT DATE(created_at)) BETWEEN 26 AND 50 THEN 'e/ 26-50 Days'
+          WHEN COUNT(DISTINCT DATE(created_at)) >= 51 THEN 'f/ 51+ Days'
+        END AS "Number of Active Days"
+      FROM axelar_service
+      GROUP BY user
+    )
+    SELECT "Number of Active Days", COUNT(DISTINCT user) AS "Number of Users"
+    FROM overview
+    GROUP BY 1
+    ORDER BY 2 DESC
+    """
+
+    df = pd.read_sql(query, conn)
+    return df
+
+
+# --- Load Data ----------------------------------------------------------------------------------------------------
+df_volume = load_user_distribution_by_volume(start_date, end_date)
+df_active_days = load_user_distribution_by_active_days(start_date, end_date)
+
+
+# --- Plotly Donut Charts ------------------------------------------------------------------------------------------
+
+colors_volume = ['#ca99e5', '#b083d1', '#8f62b7', '#6e429d', '#512c80', '#3b2062']
+colors_active_days = ['#e2fb43', '#c8df39', '#abb62f', '#8f8d27', '#746720', '#5b5218']
+
+fig_volume = go.Figure(data=[go.Pie(
+    labels=df_volume["Class"],
+    values=df_volume["Number of Users"],
+    hole=0.5,
+    marker_colors=colors_volume,
+    sort=False,
+    textinfo='label+percent'
+)])
+
+fig_volume.update_layout(
+    title_text="Distribution of Squid Users By Volume",
+    margin=dict(t=50, b=0, l=0, r=0)
+)
+
+fig_active_days = go.Figure(data=[go.Pie(
+    labels=df_active_days["Number of Active Days"],
+    values=df_active_days["Number of Users"],
+    hole=0.5,
+    marker_colors=colors_active_days,
+    sort=False,
+    textinfo='label+percent'
+)])
+
+fig_active_days.update_layout(
+    title_text="Distribution of Squid Users By Number of Active Days",
+    margin=dict(t=50, b=0, l=0, r=0)
+)
+
+# --- Display side by side -----------------------------------------------------------------------------------------
+col1, col2 = st.columns(2)
+
+with col1:
+    st.plotly_chart(fig_volume, use_container_width=True)
+
+with col2:
+    st.plotly_chart(fig_active_days, use_container_width=True)
