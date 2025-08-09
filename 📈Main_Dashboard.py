@@ -463,24 +463,33 @@ top_usr = df_source.nlargest(10, "Number of Users")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    fig1 = px.bar(top_vol.sort_values("Volume of Transfers (USD)"),
-                  x="Volume of Transfers (USD)", y="Source Chain",
-                  orientation="h",
-                  title="Top 10 Source Chains by Volume (USD)")
+    fig1 = px.bar(
+        top_vol.sort_values("Volume of Transfers (USD)"),
+        x="Volume of Transfers (USD)", y="Source Chain",
+        orientation="h",
+        title="Top 10 Source Chains by Volume (USD)",
+        color_discrete_sequence=["#ca99e5"]
+    )
     st.plotly_chart(fig1, use_container_width=True)
 
 with col2:
-    fig2 = px.bar(top_txn.sort_values("Number of Transfers"),
-                  x="Number of Transfers", y="Source Chain",
-                  orientation="h",
-                  title="Top 10 Source Chains by Transfers")
+    fig2 = px.bar(
+        top_txn.sort_values("Number of Transfers"),
+        x="Number of Transfers", y="Source Chain",
+        orientation="h",
+        title="Top 10 Source Chains by Transfers",
+        color_discrete_sequence=["#ca99e5"]
+    )
     st.plotly_chart(fig2, use_container_width=True)
 
 with col3:
-    fig3 = px.bar(top_usr.sort_values("Number of Users"),
-                  x="Number of Users", y="Source Chain",
-                  orientation="h",
-                  title="Top 10 Source Chains by Users")
+    fig3 = px.bar(
+        top_usr.sort_values("Number of Users"),
+        x="Number of Users", y="Source Chain",
+        orientation="h",
+        title="Top 10 Source Chains by Users",
+        color_discrete_sequence=["#ca99e5"]
+    )
     st.plotly_chart(fig3, use_container_width=True)
 
 # --- Destination Chain Data Query: Row 5, 6 --------------------------------------------------------------------------------------------------------------
