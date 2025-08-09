@@ -639,6 +639,7 @@ fig_vol_dest = px.bar(
 )
 fig_vol_dest.update_xaxes(tickformat=",.0f")
 fig_vol_dest.update_traces(hovertemplate="%{y}: $%{x:,.0f}<extra></extra>")
+fig_vol_dest.update_yaxes(autorange="reversed")  # ترتیب از بالا به پایین کاهشی
 
 fig_txn_dest = px.bar(
     top_txn_dest,
@@ -651,6 +652,7 @@ fig_txn_dest = px.bar(
 )
 fig_txn_dest.update_xaxes(tickformat=",.0f")
 fig_txn_dest.update_traces(hovertemplate="%{y}: %{x:,}<extra></extra>")
+fig_txn_dest.update_yaxes(autorange="reversed")
 
 fig_usr_dest = px.bar(
     top_usr_dest,
@@ -663,6 +665,7 @@ fig_usr_dest = px.bar(
 )
 fig_usr_dest.update_xaxes(tickformat=",.0f")
 fig_usr_dest.update_traces(hovertemplate="%{y}: %{x:,}<extra></extra>")
+fig_usr_dest.update_yaxes(autorange="reversed")
 
 # --- display three charts in one row -----------------------------------------------
 col1, col2, col3 = st.columns(3)
