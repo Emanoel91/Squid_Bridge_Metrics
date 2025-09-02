@@ -708,7 +708,7 @@ with col2:
 with col3:
     st.plotly_chart(fig_usr_dest, use_container_width=True)
 
-# --- Cached loader for Path metrics: Row 7, 8 ----------------------------------------------------------------------------------------------------------------------
+# --- Cached loader for Path metrics: Row 7 ----------------------------------------------------------------------------------------------------------------------
 @st.cache_data
 def load_path_data(start_date, end_date):
     start_str = pd.to_datetime(start_date).strftime("%Y-%m-%d")
